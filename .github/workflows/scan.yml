@@ -475,9 +475,7 @@ jobs:
               title: 'AI analysis failed - customer app',
               labels: ['flutter-ai-analysis', 'customer-app'],
               body: [
-                '<
-                +
-                !--fp:ai-failure-customer-->',
+                '<!--fp:ai-failure-customer-->',
                 '## AI Analysis Failed',
                 'Both Gemini and Groq failed to respond during the customer app analysis.',
                 '',
@@ -578,30 +576,9 @@ jobs:
 
               const body = [
                 `<!--fp:${fp}-->`,
-                `## ${SEV_EMOJI[sev] || 'o'} ${title}`,
-                `> AI-generated - verify in code before acting on this.`,
+                `**Problem** (\`${get(t, 'file')}\`, line ${get(t, 'line')}): ${get(t, 'description')}`,
                 '',
-                `| Field | Value |`,
-                `|---|---|`,
-                `| App | customer |`,
-                `| Severity | ${sev.toUpperCase()} |`,
-                `| Category | ${get(t, 'category')} |`,
-                `| File | ${get(t, 'file')} |`,
-                `| Line | ${get(t, 'line')} |`,
-                `| Commit | [\`${sha}\`](https://github.com/${repo}/commit/${process.env.COMMIT_SHA}) |`,
-                `| Analyzed by | ${process.env.PROVIDER} |`,
-                `| Run | [View](https://github.com/${repo}/actions/runs/${process.env.RUN_ID}) |`,
-                '',
-                `### Problem`,
-                get(t, 'description'),
-                '',
-                `### Suggested Fix`,
-                get(t, 'suggestion'),
-                '',
-                `### Closing`,
-                `Apply the fix, push, and close this issue manually when done.`,
-                '',
-                `_Generated ${new Date().toUTCString()}_`,
+                `**Suggested Fix:** ${get(t, 'suggestion')}`,
               ].join('\n');
 
               try {
@@ -1139,30 +1116,9 @@ jobs:
 
               const body = [
                 `<!--fp:${fp}-->`,
-                `## ${SEV_EMOJI[sev] || 'o'} ${title}`,
-                `> AI-generated - verify in code before acting on this.`,
+                `**Problem** (\`${get(t, 'file')}\`, line ${get(t, 'line')}): ${get(t, 'description')}`,
                 '',
-                `| Field | Value |`,
-                `|---|---|`,
-                `| App | driver |`,
-                `| Severity | ${sev.toUpperCase()} |`,
-                `| Category | ${get(t, 'category')} |`,
-                `| File | ${get(t, 'file')} |`,
-                `| Line | ${get(t, 'line')} |`,
-                `| Commit | [\`${sha}\`](https://github.com/${repo}/commit/${process.env.COMMIT_SHA}) |`,
-                `| Analyzed by | ${process.env.PROVIDER} |`,
-                `| Run | [View](https://github.com/${repo}/actions/runs/${process.env.RUN_ID}) |`,
-                '',
-                `### Problem`,
-                get(t, 'description'),
-                '',
-                `### Suggested Fix`,
-                get(t, 'suggestion'),
-                '',
-                `### Closing`,
-                `Apply the fix, push, and close this issue manually when done.`,
-                '',
-                `_Generated ${new Date().toUTCString()}_`,
+                `**Suggested Fix:** ${get(t, 'suggestion')}`,
               ].join('\n');
 
               try {

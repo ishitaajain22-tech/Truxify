@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/app_models.dart';
+import '../utils/driver_metrics.dart';
 
 const driverName = 'Ramesh Kumar';
 const driverInitials = 'RK';
@@ -23,6 +24,15 @@ const activeTripPending = '₹4,700';
 const activeTripTotal = '₹6,800';
 const onboardingTagline = 'Drive More. Earn More.';
 const loginSubtitle = 'Log in to start earning';
+
+final DateTime driverMockNow = DateTime.now();
+final int driverMonthlyEarningsInr =
+    DriverMetrics.tryParseInrAmount(driverEarningsMonth) ??
+        DriverMetrics.monthlyEarningsInrFromHistory(tripHistory, now: driverMockNow);
+final String driverMonthlyEarningsLabel =
+    DriverMetrics.formatInrCompact(driverMonthlyEarningsInr);
+final String driverTimeSinceLastTripLabel =
+    DriverMetrics.timeSinceLastTripLabel(tripHistory, now: driverMockNow);
 
 const availableFilterChips = ['All', 'Best Profit', 'Nearest', 'Earliest Pickup'];
 const tripHistoryFilters = ['This Week', 'This Month', 'All Time'];
@@ -332,40 +342,40 @@ const List<TripStop> activeTripStops = [
 const List<TripRecord> tripHistory = [
   TripRecord(
     route: 'Surat → Jaipur',
-    date: '28 Nov 2024',
+    date: '14 May 2026',
     earnings: '₹5,200',
     statusLabel: 'Completed',
-    tripId: '#TX20241128',
+    tripId: '#TX20260514',
     hash: '0x3a574d5...8f2c',
     verifiedBadge: 'Verified on Polygon',
     completed: true,
   ),
   TripRecord(
     route: 'Mumbai → Delhi',
-    date: '25 Nov 2024',
+    date: '11 May 2026',
     earnings: '₹8,400',
     statusLabel: 'Completed',
-    tripId: '#TX20241125',
+    tripId: '#TX20260511',
     hash: '0x5b2b1e3...6ad1',
     verifiedBadge: 'Verified on Polygon',
     completed: true,
   ),
   TripRecord(
     route: 'Ahmedabad → Pune',
-    date: '20 Nov 2024',
+    date: '7 May 2026',
     earnings: '₹4,800',
     statusLabel: 'Completed',
-    tripId: '#TX20241120',
+    tripId: '#TX20260507',
     hash: '0x9cf11a4...1b39',
     verifiedBadge: 'Verified on Polygon',
     completed: true,
   ),
   TripRecord(
     route: 'Vadodara → Mumbai',
-    date: '15 Nov 2024',
+    date: '2 May 2026',
     earnings: '₹3,200',
     statusLabel: 'Cancelled',
-    tripId: '#TX20241115',
+    tripId: '#TX20260502',
     hash: '0x1aa63bc...c901',
     verifiedBadge: 'Verified on Polygon',
     completed: false,

@@ -39,20 +39,31 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
                 builder: (context, setSheetState) {
                   return Column(
                     children: [
-                      ...['RC Book', 'Driving Licence', 'Insurance', 'Pollution Certificate'].map(
-                        (type) => RadioListTile<String>(
-                          value: type,
-                          groupValue: selectedType,
-                          contentPadding: EdgeInsets.zero,
-                          title: Text(type),
-                          activeColor: TruxifyColors.accent,
-                          onChanged: (value) {
-                            if (value == null) {
-                              return;
-                            }
-                            setSheetState(() => selectedType = value);
-                            setState(() => _selectedUploadType = value);
-                          },
+                      RadioGroup<String>(
+                        groupValue: selectedType,
+                        onChanged: (value) {
+                          if (value == null) {
+                            return;
+                          }
+                          setSheetState(() => selectedType = value);
+                          setState(() => _selectedUploadType = value);
+                        },
+                        child: Column(
+                          children: [
+                            ...[
+                              'RC Book',
+                              'Driving Licence',
+                              'Insurance',
+                              'Pollution Certificate',
+                            ].map(
+                              (type) => RadioListTile<String>(
+                                value: type,
+                                contentPadding: EdgeInsets.zero,
+                                title: Text(type),
+                                activeColor: TruxifyColors.accent,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                       const SizedBox(height: 12),

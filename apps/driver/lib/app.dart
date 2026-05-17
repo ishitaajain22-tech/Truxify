@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'core/app_routes.dart';
 import 'screens/documents_screen.dart';
+import 'screens/destination_picker_screen.dart';
 import 'screens/load_detail_screen.dart';
 import 'screens/load_point_detail_screen.dart';
 import 'screens/login_screen.dart';
@@ -47,6 +48,15 @@ class TruxifyApp extends StatelessWidget {
             final point = settings.arguments as RouteMapPoint;
             return truxifyPageRoute(
               (context) => LoadPointDetailScreen(point: point),
+            );
+          case AppRoutes.destinationPicker:
+            final args = settings.arguments as DestinationPickerArgs?;
+            return truxifyPageRoute(
+              (context) => DestinationPickerScreen(
+                title: args?.title ?? 'Select Destination',
+                initialQuery: args?.initialQuery,
+                initialPoint: args?.initialPoint,
+              ),
             );
           
           default:

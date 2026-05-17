@@ -7,6 +7,7 @@ import '../widgets/app_page_route.dart';
 import 'home_screen.dart';
 import 'coming_soon_screen.dart';
 import 'documents_screen.dart';
+import 'destination_picker_screen.dart';
 import 'load_detail_screen.dart';
 import 'load_point_detail_screen.dart';
 import 'profile_screen.dart';
@@ -50,6 +51,15 @@ class _ShellScreenState extends State<ShellScreen> {
         return truxifyPageRoute((context) => LoadDetailScreen(load: settings.arguments as LoadOffer));
       case AppRoutes.loadPointDetail:
         return truxifyPageRoute((context) => LoadPointDetailScreen(point: settings.arguments as RouteMapPoint));
+      case AppRoutes.destinationPicker:
+        final args = settings.arguments as DestinationPickerArgs?;
+        return truxifyPageRoute(
+          (context) => DestinationPickerScreen(
+            title: args?.title ?? 'Select Destination',
+            initialQuery: args?.initialQuery,
+            initialPoint: args?.initialPoint,
+          ),
+        );
       default:
         return truxifyPageRoute(
           (context) {
