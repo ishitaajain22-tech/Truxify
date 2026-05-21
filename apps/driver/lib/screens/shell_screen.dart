@@ -39,6 +39,16 @@ class _ShellScreenState extends State<ShellScreen> {
     _currentIndex.value = index;
   }
 
+  Route<dynamic> _errorRoute() {
+    return truxifyPageRoute(
+      (context) => const Scaffold(
+        body: Center(
+          child: Text('Error: Invalid route arguments'),
+        ),
+      ),
+    );
+  }
+
   Route<dynamic>? _routeFactory(RouteSettings settings) {
     switch (settings.name) {
       case AppRoutes.myTruck:
@@ -46,15 +56,26 @@ class _ShellScreenState extends State<ShellScreen> {
       case AppRoutes.earnings:
         return truxifyPageRoute((context) => const EarningsScreen());
       case AppRoutes.tripDetail:
-        final trip = settings.arguments as Trip;
-        return truxifyPageRoute((context) => TripDetailScreen(trip: trip));
+        final args = settings.arguments;
+        if (args is! Trip) {
+          return _errorRoute();
+        }
+        return truxifyPageRoute((context) => TripDetailScreen(trip: args));
 
       case AppRoutes.documents:
         return truxifyPageRoute((context) => const DocumentsScreen());
       case AppRoutes.loadDetail:
-        return truxifyPageRoute((context) => LoadDetailScreen(load: settings.arguments as LoadOffer));
+        final args = settings.arguments;
+        if (args is! LoadOffer) {
+          return _errorRoute();
+        }
+        return truxifyPageRoute((context) => LoadDetailScreen(load: args));
       case AppRoutes.loadPointDetail:
-        return truxifyPageRoute((context) => LoadPointDetailScreen(point: settings.arguments as RouteMapPoint));
+        final args = settings.arguments;
+        if (args is! RouteMapPoint) {
+          return _errorRoute();
+        }
+        return truxifyPageRoute((context) => LoadPointDetailScreen(point: args));
       case AppRoutes.destinationPicker:
         final args = settings.arguments as DestinationPickerArgs?;
         return truxifyPageRoute(

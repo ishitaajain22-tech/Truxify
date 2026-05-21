@@ -59,9 +59,7 @@ class DriverMetrics {
       return (amount * multiplier).round();
     }
 
-    final match = RegExp(r'(\d[\d,]*)').firstMatch(normalized);
-    if (match == null) return null;
-    final digits = (match.group(1) ?? '').replaceAll(',', '');
+    final digits = normalized.replaceAll(RegExp(r'[^0-9]'), '');
     return int.tryParse(digits);
   }
 
