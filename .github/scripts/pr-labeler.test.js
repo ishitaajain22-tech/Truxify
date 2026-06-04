@@ -21,7 +21,11 @@ const availableLabels = [
   'flutter',
   'backend',
   'type:api',
-  'documentation',
+  'type:docs',
+  'type:performance',
+  'type:design',
+  'type:devops',
+  'type:accessibility',
   'dependencies'
 ];
 
@@ -96,5 +100,31 @@ test('selectLabels ignores labels that do not exist in the repository', () => {
     availableLabels
   });
 
-  assert.deepEqual(labels, ['documentation']);
+  assert.deepEqual(labels, ['type:docs']);
+});
+
+test('selectLabels matches new performance, design, devops, and accessibility prefixes', () => {
+  const labelsPerf = selectLabels({
+    prTitle: 'perf: optimize load time',
+    availableLabels
+  });
+  assert.deepEqual(labelsPerf, ['type:performance']);
+
+  const labelsDesign = selectLabels({
+    prTitle: 'ui: update dashboard layout',
+    availableLabels
+  });
+  assert.deepEqual(labelsDesign, ['type:design']);
+
+  const labelsDevOps = selectLabels({
+    prTitle: 'ci: add test action',
+    availableLabels
+  });
+  assert.deepEqual(labelsDevOps, ['type:devops']);
+
+  const labelsA11y = selectLabels({
+    prTitle: 'a11y: add screen reader labels',
+    availableLabels
+  });
+  assert.deepEqual(labelsA11y, ['type:accessibility']);
 });

@@ -7,8 +7,8 @@ Truxify uses `.github/workflows/pr-labeler.yml` to add safe, review-friendly lab
 The labeler uses three inputs:
 
 1. Linked issue labels from closing keywords such as `Fixes #320`.
-2. Pull request title/body signals such as `feat:`, `fix:`, `test:`, `security`, `GSSoC`, or `NSoC`.
-3. Changed file paths such as `apps/customer/`, `apps/driver/`, `backend/api/`, `backend/ml/`, `blockchain/`, `automation/`, `docs/`, and test files.
+2. Pull request title/body signals mapped to type labels: `type:bug` (fix/bug), `type:feature` (feat/feature), `type:docs` (docs), `type:testing` (test), `type:security` (security/auth), `type:performance` (perf), `type:design` (design/ui), `type:refactor` (refactor), `type:devops` (ci/cd/build), and `type:accessibility` (a11y).
+3. Changed file paths such as `apps/customer/`, `apps/driver/`, `backend/api/`, `backend/ml/`, `blockchain/`, `automation/`, docs/markdown files (mapped to `type:docs`), and test files.
 
 The labeler never removes or overwrites labels that maintainers added manually. It also skips any configured label that does not already exist in the repository.
 

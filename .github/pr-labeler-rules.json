@@ -22,24 +22,26 @@
     "type:api",
     "type:bug",
     "type:design",
+    "type:docs",
     "type:feature",
     "type:refactor",
     "type:security",
     "type:testing",
+    "type:performance",
+    "type:devops",
     "customer-app",
     "driver-app",
     "backend",
     "blockchain",
     "ml",
     "automation",
-    "documentation",
     "dependencies",
     "nsoc",
     "nsoc26"
   ],
   "titleRules": [
     {
-      "pattern": "^(fix|bug|hotfix|security)",
+      "pattern": "^(fix|bug|hotfix)",
       "labels": ["type:bug"]
     },
     {
@@ -56,11 +58,27 @@
     },
     {
       "pattern": "^(docs|doc|documentation)",
-      "labels": ["documentation"]
+      "labels": ["type:docs"]
     },
     {
       "pattern": "(xss|csrf|ssrf|auth|vulnerability|security|secret|token)",
       "labels": ["type:security"]
+    },
+    {
+      "pattern": "^(perf|performance)",
+      "labels": ["type:performance"]
+    },
+    {
+      "pattern": "^(design|ui|ux)",
+      "labels": ["type:design"]
+    },
+    {
+      "pattern": "^(ci|cd|devops|build|infra)",
+      "labels": ["type:devops"]
+    },
+    {
+      "pattern": "^(a11y|accessibility)",
+      "labels": ["type:accessibility"]
     }
   ],
   "pathRules": [
@@ -90,7 +108,7 @@
     },
     {
       "pattern": "(^docs/|README|CONTRIBUTING|\\.md$)",
-      "labels": ["documentation"]
+      "labels": ["type:docs"]
     },
     {
       "pattern": "(^test/|/test/|\\.test\\.|_test\\.)",
