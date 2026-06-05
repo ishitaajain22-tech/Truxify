@@ -64,35 +64,8 @@ export function initWebSocketServer(server) {
       ws.isAlive = true;
     });
 
-    ws.on('message', async (message) => {
-      try {
-        const payload = JSON.parse(message.toString());
-        const { event, data } = payload;
-
-        if (!event || !data) {
-          return ws.send(JSON.stringify({ error: 'Invalid payload format. Must include "event" and "data" keys.' }));
-        }
-
-        switch (event) {
-          case 'location_ping':
-            await handleLocationPing(ws, data);
-            break;
-
-          case 'subscribe_tracking':
-            handleSubscribe(ws, data);
-            break;
-
-          case 'unsubscribe_tracking':
-            handleUnsubscribe(ws, data);
-            break;
-
-          default:
-            ws.send(JSON.stringify({ warning: `Unknown event type: ${event}` }));
-        }
-      } catch (err) {
-        console.error('WS Message parsing error:', err.message);
-        ws.send(JSON.stringify({ error: 'Invalid JSON payload structure.' }));
-      }
+    ws.on('message', (message) => {
+      handleTrackingMessage(ws, message);
     });
 
     ws.on('close', () => {
@@ -126,6 +99,44 @@ export function initWebSocketServer(server) {
   }
 
   console.log('🚀 WebSocket tracking router initialized.');
+}
+
+export async function handleTrackingMessage(ws, message) {
+  const messageText = message.toString();
+
+  if (messageText === 'ping') {
+    ws.isAlive = true;
+    return ws.send('pong');
+  }
+
+  try {
+    const payload = JSON.parse(messageText);
+    const { event, data } = payload;
+
+    if (!event || !data) {
+      return ws.send(JSON.stringify({ error: 'Invalid payload format. Must include "event" and "data" keys.' }));
+    }
+
+    switch (event) {
+      case 'location_ping':
+        await handleLocationPing(ws, data);
+        break;
+
+      case 'subscribe_tracking':
+        handleSubscribe(ws, data);
+        break;
+
+      case 'unsubscribe_tracking':
+        handleUnsubscribe(ws, data);
+        break;
+
+      default:
+        ws.send(JSON.stringify({ warning: `Unknown event type: ${event}` }));
+    }
+  } catch (err) {
+    console.error('WS Message parsing error:', err.message);
+    ws.send(JSON.stringify({ error: 'Invalid JSON payload structure.' }));
+  }
 }
 
 /**
