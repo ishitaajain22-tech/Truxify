@@ -50,7 +50,7 @@ create or replace function get_profile_id()
 returns uuid
 language sql stable security definer
 as $$
-  select id from profiles where firebase_uid = auth.uid()::text limit 1;
+  select id from profiles where firebase_uid = (auth.jwt() ->> 'sub') limit 1;
 $$;
 
 
@@ -710,18 +710,18 @@ create policy "Service role full access on profiles"
 create policy "Users select own profile"
   on profiles for select
   to authenticated
-  using (firebase_uid = auth.uid()::text);
+  using (firebase_uid = (auth.jwt() ->> 'sub'));
 
 create policy "Users insert own profile"
   on profiles for insert
   to authenticated
-  with check (firebase_uid = auth.uid()::text);
+  with check (firebase_uid = (auth.jwt() ->> 'sub'));
 
 create policy "Users update own profile"
   on profiles for update
   to authenticated
-  using (firebase_uid = auth.uid()::text)
-  with check (firebase_uid = auth.uid()::text);
+  using (firebase_uid = (auth.jwt() ->> 'sub'))
+  with check (firebase_uid = (auth.jwt() ->> 'sub'));
 
 
 -- 2. DRIVER DETAILS
@@ -951,6 +951,20 @@ create policy "Drivers view own trip stops"
   on trip_stops for select
   to authenticated
   using (
+    trip_display_id in (
+      select trip_display_id from trips where driver_id = get_profile_id()
+    )
+  );
+
+create policy "Drivers update own trip stops"
+  on trip_stops for update
+  to authenticated
+  using (
+    trip_display_id in (
+      select trip_display_id from trips where driver_id = get_profile_id()
+    )
+  )
+  with check (
     trip_display_id in (
       select trip_display_id from trips where driver_id = get_profile_id()
     )
