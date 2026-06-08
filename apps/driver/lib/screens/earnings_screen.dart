@@ -368,6 +368,7 @@ class _EarningsScreenState extends State<EarningsScreen> {
   }
 
   Widget _buildHeatmapCalendarCard() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     // Days in current selection
     final DateTime firstDay = DateTime(_currentYear, _currentMonth, 1);
     final int firstWeekday = firstDay.weekday; // 1 = Mon, 7 = Sun
@@ -385,7 +386,9 @@ class _EarningsScreenState extends State<EarningsScreen> {
         border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: isDark
+                ? Colors.black.withOpacity(0.25)
+                : Colors.black.withOpacity(0.02),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -423,7 +426,11 @@ class _EarningsScreenState extends State<EarningsScreen> {
                 children: [
                   IconButton(
                     onPressed: _prevMonth,
-                    icon: const Icon(Icons.chevron_left_rounded, size: 20),
+                    icon: const Icon(
+                      Icons.chevron_left_rounded,
+                      size: 20,
+                      color: Colors.black,
+                    ),
                     visualDensity: VisualDensity.compact,
                     style: IconButton.styleFrom(
                       backgroundColor: TruxifyColors.accentVeryLight,
@@ -441,7 +448,11 @@ class _EarningsScreenState extends State<EarningsScreen> {
                   const SizedBox(width: 8),
                   IconButton(
                     onPressed: _nextMonth,
-                    icon: const Icon(Icons.chevron_right_rounded, size: 20),
+                    icon: const Icon(
+                      Icons.chevron_right_rounded,
+                      size: 20,
+                      color: Colors.black,
+                    ),
                     visualDensity: VisualDensity.compact,
                     style: IconButton.styleFrom(
                       backgroundColor: TruxifyColors.accentVeryLight,
@@ -498,8 +509,12 @@ class _EarningsScreenState extends State<EarningsScreen> {
               final earnings = earningData?.amount ?? 0.0;
 
               // Determine color based on earnings magnitude relative to max ₹8,400
-              Color cellBgColor =
-                  Theme.of(context).colorScheme.outlineVariant.withOpacity(0.3);
+              Color cellBgColor = isDark
+                  ? TruxifyColors.darkBorder.withOpacity(0.5)
+                  : Theme.of(context)
+                      .colorScheme
+                      .outlineVariant
+                      .withOpacity(0.3);
               Color textColor = Theme.of(context).colorScheme.onSurface;
               FontWeight textWeight = FontWeight.normal;
 
@@ -512,10 +527,13 @@ class _EarningsScreenState extends State<EarningsScreen> {
                   textColor = Colors.white;
                   textWeight = FontWeight.bold;
                 } else {
-                  textColor = TruxifyColors.accentDark;
+                  textColor = isDark
+                      ? TruxifyColors.darkPrimaryText
+                      : TruxifyColors.accentDark;
                   textWeight = FontWeight.w600;
                 }
               } else if (earningData != null && earnings == 0.0) {
+                // Cancelled day (grey card outline style)
                 cellBgColor = Theme.of(context)
                     .colorScheme
                     .outlineVariant
@@ -580,10 +598,14 @@ class _EarningsScreenState extends State<EarningsScreen> {
                 ),
               ),
               const SizedBox(width: 4),
-              _buildLegendBox(Theme.of(context)
-                  .colorScheme
-                  .outlineVariant
-                  .withOpacity(0.3)),
+              _buildLegendBox(
+                isDark
+                    ? TruxifyColors.darkBorder.withOpacity(0.5)
+                    : Theme.of(context)
+                        .colorScheme
+                        .outlineVariant
+                        .withOpacity(0.3),
+              ),
               const SizedBox(width: 2),
               _buildLegendBox(TruxifyColors.accent.withOpacity(0.2)),
               const SizedBox(width: 2),
