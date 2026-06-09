@@ -1,6 +1,12 @@
 import express from 'express';
 import { authenticate } from '../middleware/auth.js';
-import { supabase } from '../config/db.js';
+import {
+  getProfile,
+  getCustomerStats,
+  getDriverDetails
+} from '../services/profileService.js';
+
+import { ProfileModel } from '../models/ProfileModel.js';
 
 const router = express.Router();
 
@@ -11,13 +17,7 @@ router.get('/', authenticate, async (req, res) => {
     const role = req.user.role;
 
     // 1. base profile
-    const { data: profile, error: profileErr } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .maybeSingle();
-
-    if (profileErr) throw profileErr;
+    const profile = await getProfile(userId);
     if (!profile) {
       return res.status(404).json({ error: 'Profile not found' });
     }
@@ -26,30 +26,19 @@ router.get('/', authenticate, async (req, res) => {
 
     // 2. role-based fetch
     if (role === 'customer') {
-      const { data } = await supabase
-        .from('customer_stats')
-        .select('*')
-        .eq('user_id', userId)
-        .maybeSingle();
-
-      extra = data;
+      const stats = await getCustomerStats(userId);
+      extra = ProfileModel.fromCustomerStats(stats);
     }
 
     if (role === 'driver') {
-      const { data } = await supabase
-        .from('driver_details')
-        .select('*')
-        .eq('user_id', userId)
-        .maybeSingle();
-
-      extra = data;
+      const details = await getDriverDetails(userId);
+      extra = ProfileModel.fromDriverDetails(details);
     }
 
     return res.json({
-      profile,
+      profile: ProfileModel.fromProfile(profile),
       extra
     });
-
   } catch (err) {
     return res.status(500).json({
       error: 'Failed to fetch profile',
@@ -62,7 +51,7 @@ router.get('/', authenticate, async (req, res) => {
 router.put('/', authenticate, async (req, res) => {
   try {
     const userId = req.user.id;
-    const { full_name, language, dark_mode } = req.body;
+    const { full_name, language, dark_mode, is_online } = req.body;
 
     const { data, error } = await supabase
       .from('profiles')
@@ -76,6 +65,18 @@ router.put('/', authenticate, async (req, res) => {
       .single();
 
     if (error) throw error;
+
+    // role-specific update (driver only)
+    if (req.user.role === 'driver' && typeof is_online !== 'undefined') {
+      const { error: driverError } = await supabase
+        .from('driver_details')
+        .update({
+          is_online
+        })
+        .eq('user_id', userId);
+
+      if (driverError) throw driverError;
+    }
 
     res.json({
       message: 'Profile updated',
