@@ -27,6 +27,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen>
   final _paymentRepo = PaymentRepository();
   final _addressRepo = AddressRepository();
   bool _showSuccess = false;
+  bool _isLoading = true;
   String? _createdOrderId;
   late final AnimationController _controller;
   late final OrderService _orderService;
@@ -51,6 +52,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen>
   }
 
   Future<void> _loadCheckoutData() async {
+    setState(() => _isLoading = true);
     try {
       final methods = await _paymentRepo.fetchAll();
       final addresses = await _addressRepo.fetchAll();
@@ -75,14 +77,26 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen>
       });
     } catch (e) {
       debugPrint('Failed to load checkout data: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to load checkout options: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
   Future<void> _pay() async {
+    final finalDropLat = _selectedAddress?.latitude ?? widget.draft.dropLat;
+    final finalDropLng = _selectedAddress?.longitude ?? widget.draft.dropLng;
+
     if (widget.draft.pickupLat == null ||
         widget.draft.pickupLng == null ||
-        widget.draft.dropLat == null ||
-        widget.draft.dropLng == null) {
+        finalDropLat == null ||
+        finalDropLng == null) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Missing pickup or drop coordinates. Please go back and select valid locations.')),
@@ -93,11 +107,11 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen>
     try {
       final orderId = await _orderService.createOrder(
         pickupAddress: widget.draft.pickup,
-        dropAddress: widget.draft.drop,
+        dropAddress: _selectedAddress?.fullAddress ?? widget.draft.drop,
         pickupLat: widget.draft.pickupLat!,
         pickupLng: widget.draft.pickupLng!,
-        dropLat: widget.draft.dropLat!,
-        dropLng: widget.draft.dropLng!,
+        dropLat: finalDropLat,
+        dropLng: finalDropLng,
         pickupTime: widget.draft.dateLabel,
         goodsType: widget.draft.goodsType,
         weightTonnes: double.tryParse(widget.draft.weightTonnes) ?? 0,
@@ -150,7 +164,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen>
                 _SummaryRow(
                     label: 'Route',
                     value:
-                        '${widget.draft.pickup.split(',').first} → ${widget.draft.drop.split(',').first}'),
+                        '${widget.draft.pickup.split(',').first} → ${_selectedAddress != null ? _selectedAddress!.label : widget.draft.drop.split(',').first}'),
                 _SummaryRow(label: 'Pickup', value: widget.draft.dateLabel),
                 _SummaryRow(
                     label: 'Goods',
@@ -240,8 +254,13 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen>
                 const SizedBox(height: 12),
                 DropdownButtonFormField<PaymentMethod>(
                   value: _selectedPayment,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'Select payment method',
+                    helperText: _isLoading
+                        ? 'Loading payment methods...'
+                        : (_paymentMethods.isEmpty
+                            ? 'No payment methods saved. Please add one in Profile.'
+                            : null),
                   ),
                   items: _paymentMethods
                       .map(
@@ -251,7 +270,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen>
                         ),
                       )
                       .toList(),
-                  onChanged: _paymentMethods.isEmpty
+                  onChanged: _isLoading || _paymentMethods.isEmpty
                       ? null
                       : (value) {
                           setState(() {
@@ -262,8 +281,13 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen>
                 const SizedBox(height: 12),
                 DropdownButtonFormField<SavedAddress>(
                   value: _selectedAddress,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'Select saved address',
+                    helperText: _isLoading
+                        ? 'Loading saved addresses...'
+                        : (_addresses.isEmpty
+                            ? 'No saved addresses. Please add one in Profile.'
+                            : null),
                   ),
                   items: _addresses
                       .map(
@@ -273,7 +297,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen>
                         ),
                       )
                       .toList(),
-                  onChanged: _addresses.isEmpty
+                  onChanged: _isLoading || _addresses.isEmpty
                       ? null
                       : (value) {
                           setState(() {
@@ -289,7 +313,10 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen>
                           controller: _controller,
                           orderId: _createdOrderId ?? '',
                         )
-                      : PrimaryButton(label: 'Pay & Confirm', onPressed: _pay),
+                      : PrimaryButton(
+                          label: _isLoading ? 'Loading...' : 'Pay & Confirm',
+                          onPressed: _isLoading ? null : _pay,
+                        ),
                 ),
               ],
             ),

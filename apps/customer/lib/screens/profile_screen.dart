@@ -65,6 +65,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             'name': profile['fullName']?.toString() ?? '',
             'company': profile['companyName']?.toString() ?? '',
             'phone': profile['phone']?.toString() ?? '',
+            'totalOrders': extra?['totalOrders']?.toString() ?? '0',
+            'totalSaved': extra?['totalSaved']?.toString() ?? '0',
+            'co2ReducedKg': extra?['co2ReducedKg']?.toString() ?? '0',
           });
         }
 
@@ -78,15 +81,40 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _displayName = profile?['fullName']?.toString() ?? '';
           _displayCompany = profile?['companyName']?.toString() ?? '';
           _displayPhone = profile?['phone']?.toString() ?? '';
-          _defaultPaymentLabel = methods.where((m) => m.isDefault).isNotEmpty
-              ? methods.firstWhere((m) => m.isDefault).displayLabel
-              : null;
-          _defaultAddressLabel = addresses.where((a) => a.isDefault).isNotEmpty
-              ? addresses.firstWhere((a) => a.isDefault).label
-              : null;
-          _totalOrders = extra?['totalOrders'] ?? 0;
-          _totalSaved = extra?['totalSaved'] ?? 0;
-          _co2ReducedKg = extra?['co2ReducedKg'] ?? 0;
+
+          String? defaultPayment;
+          for (final m in methods) {
+            if (m.isDefault) {
+              defaultPayment = m.displayLabel;
+              break;
+            }
+          }
+          _defaultPaymentLabel = defaultPayment;
+
+          String? defaultAddress;
+          for (final a in addresses) {
+            if (a.isDefault) {
+              defaultAddress = a.label;
+              break;
+            }
+          }
+          _defaultAddressLabel = defaultAddress;
+
+          final rawOrders = extra?['totalOrders'];
+          _totalOrders = rawOrders is int
+              ? rawOrders
+              : (rawOrders != null ? (int.tryParse(rawOrders.toString()) ?? 0) : 0);
+
+          final rawSaved = extra?['totalSaved'];
+          _totalSaved = rawSaved is num
+              ? rawSaved
+              : (rawSaved != null ? (num.tryParse(rawSaved.toString()) ?? 0) : 0);
+
+          final rawCo2 = extra?['co2ReducedKg'];
+          _co2ReducedKg = rawCo2 is num
+              ? rawCo2
+              : (rawCo2 != null ? (num.tryParse(rawCo2.toString()) ?? 0) : 0);
+
           _lastUpdatedLabel = DateTime.now().toIso8601String();
         });
         return;
@@ -103,6 +131,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _displayName = cachedProfile?['name']?.toString() ?? '';
       _displayCompany = cachedProfile?['company']?.toString() ?? '';
       _displayPhone = cachedProfile?['phone']?.toString() ?? '';
+      _totalOrders = int.tryParse(cachedProfile?['totalOrders']?.toString() ?? '0') ?? 0;
+      _totalSaved = num.tryParse(cachedProfile?['totalSaved']?.toString() ?? '0') ?? 0;
+      _co2ReducedKg = num.tryParse(cachedProfile?['co2ReducedKg']?.toString() ?? '0') ?? 0;
       _lastUpdatedLabel = cachedProfile?['_cached_at']?.toString();
     });
   }

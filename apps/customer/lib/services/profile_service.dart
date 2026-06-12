@@ -45,9 +45,14 @@ class ProfileService {
       },
     );
 
-    final body = response.body.isNotEmpty
-        ? jsonDecode(response.body) as Map<String, dynamic>
-        : <String, dynamic>{};
+    Map<String, dynamic> body;
+    try {
+      body = response.body.isNotEmpty
+          ? jsonDecode(response.body) as Map<String, dynamic>
+          : <String, dynamic>{};
+    } catch (_) {
+      throw const FormatException('Invalid JSON response from server.');
+    }
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw StateError(
