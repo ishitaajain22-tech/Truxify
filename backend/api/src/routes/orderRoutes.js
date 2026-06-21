@@ -20,9 +20,11 @@ import {
   predictDemandSchema
 } from '../validation/requestSchemas.js';
 import { awardReputationPoints } from '../services/reputation.js';
+import { predictDemand, predictPrice } from '../services/ml.js';
 import { changeDropSchema, cancelOrderSchema } from '../validation/requestSchemas.js';
 import { buildDepositTx, recordDepositTx, escrowRelease, escrowRefund, ESCROW_MATIC_PER_PAISA } from '../services/escrow.js';
 import { sendDeliveryOtpNotification, storeDeliveryOtp, getActiveDeliveryOtp, verifyDeliveryOtp, expireDeliveryOtps } from '../services/notificationService.js';
+import logger from '../middleware/logger.js';
 
 const router = express.Router();
 
@@ -704,8 +706,13 @@ router.post('/:id/bids/:bidId/accept', authenticate, requireRole(['customer']), 
                 value: parsed.value ? parsed.value.toString() : undefined,
               };
             } catch (parseErr) {
-              // Fallback: return raw hex if parsing fails
-              depositTxData = { data: txData };
+              // Fallback: when txData is a raw hex string, preserve the data
+              // and supply a fallback recipient address so UI consumers can
+              // still handle the transaction object shape.
+              depositTxData = {
+                to: process.env.ESCROW_CONTRACT_ADDRESS || '0x0000000000000000000000000000000000000000',
+                data: txData,
+              };
             }
           } else {
             depositTxData = txData;
