@@ -46,7 +46,6 @@ let telemetryMonitorInterval = null;
 const WS_UPGRADE_RATE_LIMIT = 5;
 const WS_UPGRADE_RATE_WINDOW_SECONDS = 60;
 const MAX_MSG_PER_SECOND = 10;
-const messageRateTracker = new WeakMap();
 
 function getClientIp(request) {
   const forwardedFor = request.headers?.['x-forwarded-for'];
@@ -272,19 +271,29 @@ export function initWebSocketServer(server) {
   logger.info('🚀 WebSocket tracking router initialized.');
 }
 
-function isMessageRateLimited(ws) {
-  const now = Date.now();
-  let state = messageRateTracker.get(ws);
-  if (!state || now - state.windowStart >= 1000) {
-    state = { count: 0, windowStart: now };
-    messageRateTracker.set(ws, state);
+async function isMessageRateLimited(ws) {
+  const key = ws.user?.id
+    ? `ws:msg:${ws.user.id}`
+    : `ws:msg:ip:${ws.driverId || 'unknown'}`;
+
+  if (!redisClient) {
+    return false;
   }
-  state.count++;
-  return state.count > MAX_MSG_PER_SECOND;
+
+  try {
+    const count = await redisClient.incr(key);
+    if (count === 1) {
+      await redisClient.expire(key, 1);
+    }
+    return count > MAX_MSG_PER_SECOND;
+  } catch (err) {
+    logger.error('[ws] Rate limit check error:', err.message);
+    return false;
+  }
 }
 
 export async function handleTrackingMessage(ws, message) {
-  if (isMessageRateLimited(ws)) {
+  if (await isMessageRateLimited(ws)) {
     return;
   }
 
