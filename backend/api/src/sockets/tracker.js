@@ -275,6 +275,24 @@ export function initWebSocketServer(server) {
   logger.info('🚀 WebSocket tracking router initialized.');
 }
 
+async function isMessageRateLimited(ws) {
+  const key = ws.user?.id
+    ? `ws:msg:${ws.user.id}`
+    : `ws:msg:ip:${ws.driverId || 'unknown'}`;
+
+  if (!redisClient) {
+    return false;
+  }
+
+  try {
+    const count = await redisClient.incr(key);
+    if (count === 1) {
+      await redisClient.expire(key, 1);
+    }
+    return count > MAX_MSG_PER_SECOND;
+  } catch (err) {
+    logger.error('[ws] Rate limit check error:', err.message);
+    return false;
 const DRIVER_ONLINE_TIMEOUT_MS = parseInt(process.env.DRIVER_ONLINE_TIMEOUT_MS, 10) || 5 * 60 * 1000; // 5 minutes
 
 async function expireStaleDriverOnlineStatus() {
@@ -306,12 +324,10 @@ function isMessageRateLimited(ws) {
     state = { count: 0, windowStart: now };
     messageRateTracker.set(ws, state);
   }
-  state.count++;
-  return state.count > MAX_MSG_PER_SECOND;
 }
 
 export async function handleTrackingMessage(ws, message) {
-  if (isMessageRateLimited(ws)) {
+  if (await isMessageRateLimited(ws)) {
     return;
   }
 
