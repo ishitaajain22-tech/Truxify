@@ -240,6 +240,7 @@ router.put('/fcm-token', authenticate, userLimiter, async (req, res) => {
   }
 });
 
+export default router;
 // GET DRIVER STATEMENT
 router.get('/driver/statement', authenticate, requireRole(['driver']), userLimiter, validateQuery(driverStatementSchema), async (req, res) => {
   const userId = req.user.id;
