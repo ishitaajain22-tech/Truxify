@@ -191,6 +191,10 @@ export const driverStatementSchema = z.object({
 // e.g. MH12AB1234 or DL01C1234
 const numberPlateRegex = /^[A-Z]{2}\d{2}[A-Z]{1,3}\d{1,4}$/;
 
+export const otpSendSchema = z.object({
+  phone: z.string().trim().min(10).max(20),
+}).strict();
+
 export const registerTruckSchema = z.object({
   name: z.string()
     .min(2, 'Truck name must be at least 2 characters')
