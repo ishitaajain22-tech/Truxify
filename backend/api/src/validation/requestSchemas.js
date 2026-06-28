@@ -179,6 +179,8 @@ export const createTicketCommentSchema = z.object({
   message: z.string().transform((v) => v.trim()).pipe(
     z.string().min(1, 'Message is required').max(1000, 'Message must be 1000 characters or fewer')
   )
+}).strict();
+
 export const driverStatementSchema = z.object({
   start_date: z.string().refine(value => !Number.isNaN(Date.parse(value)), {
     message: 'Must be a valid date string',
@@ -186,6 +188,7 @@ export const driverStatementSchema = z.object({
   end_date: z.string().refine(value => !Number.isNaN(Date.parse(value)), {
     message: 'Must be a valid date string',
   }).optional(),
+}).strict();
 
 // Indian vehicle registration plate: 2 letters, 2 digits, up to 3 letters, up to 4 digits
 // e.g. MH12AB1234 or DL01C1234
