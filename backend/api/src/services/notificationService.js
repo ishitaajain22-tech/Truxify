@@ -18,19 +18,21 @@ const INVALID_TOKEN_CODES = new Set([
 const MAX_RETRIES = 3;
 const RETRY_DELAYS = [1000, 2000, 4000];
 
-async function getUserFcmToken(userId) {
-  if (!supabase) return null;
+// Fetch all active FCM tokens for a user from user_devices (authoritative source).
+// profiles.fcm_token is NOT used — it is not kept in sync with device registrations.
+// Returns an array (may be empty) so callers can fan-out to all registered devices.
+async function getUserFcmTokens(userId) {
+  if (!supabase) return [];
   try {
     const { data, error } = await supabase
-      .from('profiles')
+      .from('user_devices')
       .select('fcm_token')
-      .eq('id', userId)
-      .maybeSingle();
-    if (error || !data?.fcm_token) return null;
-    return data.fcm_token;
+      .eq('user_id', userId);
+    if (error || !data) return [];
+    return data.map(row => row.fcm_token).filter(Boolean);
   } catch (err) {
-    logger.error(`[NotificationService] Failed to fetch FCM token: ${err.message}`);
-    return null;
+    logger.error(`[NotificationService] Failed to fetch FCM tokens: ${err.message}`);
+    return [];
   }
 }
 
@@ -60,9 +62,9 @@ export async function sendFcmNotification(userId, notification, data = {}) {
     return { success: false, error: 'Firebase not configured' };
   }
 
-  const fcmToken = await getUserFcmToken(userId);
-  if (!fcmToken) {
-    logger.warn(`[FCM] No FCM token for user ${userId} — skipping push notification`);
+  const fcmTokens = await getUserFcmTokens(userId);
+  if (fcmTokens.length === 0) {
+    logger.warn(`[FCM] No FCM tokens for user ${userId} — skipping push notification`);
     return { success: false, error: 'No FCM token' };
   }
 
@@ -70,38 +72,48 @@ export async function sendFcmNotification(userId, notification, data = {}) {
     Object.entries(data).map(([k, v]) => [k, String(v)])
   );
 
-  let lastError = null;
-  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
-    try {
-      const messageId = await firebaseAdmin.messaging().send({
-        token: fcmToken,
-        notification: {
-          title: notification.title,
-          body: notification.body,
-        },
-        data: stringData,
-      });
+  // Fan-out: send to every registered device for this user
+  async function sendToToken(fcmToken) {
+    let lastError = null;
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      try {
+        const messageId = await firebaseAdmin.messaging().send({
+          token: fcmToken,
+          notification: {
+            title: notification.title,
+            body: notification.body,
+          },
+          data: stringData,
+        });
+        logger.info(`[FCM] Push sent to user ${userId} token ...${fcmToken.slice(-6)} — messageId: ${messageId}`);
+        return { success: true, messageId };
+      } catch (err) {
+        lastError = err;
+        logger.error(`[FCM] Delivery failed for user ${userId} token ...${fcmToken.slice(-6)} (attempt ${attempt + 1}/${MAX_RETRIES}) — errorCode: ${err.code ?? 'unknown'} — ${err.message}`);
 
-      logger.info(`[FCM] Push notification sent to user ${userId} — messageId: ${messageId}`);
-      return { success: true, messageId };
-    } catch (err) {
-      lastError = err;
-      logger.error(`[FCM] Delivery failed for user ${userId} (attempt ${attempt + 1}/${MAX_RETRIES}) — errorCode: ${err.code ?? 'unknown'} — ${err.message}`);
+        if (isInvalidTokenError(err.code)) {
+          logger.warn(`[FCM] Removing invalid FCM token ...${fcmToken.slice(-6)} for user ${userId}`);
+          // Remove only the stale token from user_devices, not all tokens
+          if (supabase) {
+            await supabase.from('user_devices').delete().eq('fcm_token', fcmToken).catch(dbErr =>
+              logger.error(`[FCM] Failed to remove invalid token from user_devices: ${dbErr.message}`)
+            );
+          }
+          return { success: false, error: err.message, errorCode: err.code };
+        }
 
-      if (isInvalidTokenError(err.code)) {
-        logger.warn(`[FCM] Clearing invalid FCM token for user ${userId} due to error: ${err.code}`);
-        await clearInvalidToken(userId);
-        return { success: false, error: err.message, errorCode: err.code };
-      }
-
-      if (isTransientError(err.code) && attempt < MAX_RETRIES - 1) {
-        logger.info(`[FCM] Retrying after ${RETRY_DELAYS[attempt]}ms for user ${userId}`);
-        await new Promise(resolve => setTimeout(resolve, RETRY_DELAYS[attempt]));
+        if (isTransientError(err.code) && attempt < MAX_RETRIES - 1) {
+          logger.info(`[FCM] Retrying after ${RETRY_DELAYS[attempt]}ms for user ${userId}`);
+          await new Promise(resolve => setTimeout(resolve, RETRY_DELAYS[attempt]));
+        }
       }
     }
+    return { success: false, error: lastError?.message || 'Unknown error', errorCode: lastError?.code };
   }
 
-  return { success: false, error: lastError?.message || 'Unknown error', errorCode: lastError?.code };
+  const results = await Promise.all(fcmTokens.map(token => sendToToken(token)));
+  const anySuccess = results.some(r => r.success);
+  return { success: anySuccess, results };
 }
 
 export async function storeDeliveryOtp(orderId, otp, ttlMinutes = 15) {
@@ -206,20 +218,26 @@ export async function sendDeliveryOtpNotification(customerId, orderDisplayId, ot
     logger.error('[NotificationService] Database connection error during notification insert:', dbErr.message);
   }
 
-  let fcmResult;
-  try { fcmResult = await sendFcmNotification(
+  const fcmResult = await sendFcmNotification(
     customerId,
-    { title: 'Delivery Verification OTP', body: `A delivery OTP has been generated for order ${orderDisplayId}. Open the app to view the code.` },
+    {
+      title: 'Delivery Verification OTP',
+      body: `A delivery OTP has been generated for order ${orderDisplayId}. Open the app to view the code.`,
+    },
     { orderDisplayId, notifType: 'delivery_otp' }
-  ); } catch (_) { /* logged internally by sendFcmNotification */ }
+  );
 
   if (process.env.TWILIO_AUTH_TOKEN) {
-    logger.info(`[NotificationService] [SMS] SMS stub: Sending OTP for order ${orderDisplayId} (masked)`);
+    const smsOtpLog = process.env.NODE_DEBUG
+      ? `Sending SMS to customer phone containing OTP ${otp}`
+      : `Sending SMS to customer phone containing OTP ${otp.slice(0, 2)}***`;
+    logger.info(`[NotificationService] [SMS] SMS stub: ${smsOtpLog}`);
   } else {
-    logger.info(`[NotificationService] [SMS] SMS stub: No SMS gateway configured. OTP sent out-of-band for order ${orderDisplayId} (masked)`);
+    const logOtp = process.env.NODE_DEBUG ? otp : `${otp.slice(0, 2)}***`;
+    logger.info(`[NotificationService] [SMS] SMS stub: No SMS gateway configured. Logging OTP out-of-band: ${logOtp}`);
   }
 
-  return { success: dbSuccess || fcmResult?.success, fcm: fcmResult };
+  return { success: dbSuccess || fcmResult.success, fcm: fcmResult };
 }
 
 export async function sendPushNotification(userId, title, body, notifType, metadata = {}) {
@@ -237,7 +255,6 @@ export async function sendPushNotification(userId, title, body, notifType, metad
     }
   }
 
-  let fcmResult;
-  try { fcmResult = await sendFcmNotification(userId, { title, body }, { notifType, ...metadata }); } catch (_) { /* logged internally */ }
-  return { success: fcmResult?.success, fcm: fcmResult };
+  const fcmResult = await sendFcmNotification(userId, { title, body }, { notifType, ...metadata });
+  return { success: fcmResult.success, fcm: fcmResult };
 }
