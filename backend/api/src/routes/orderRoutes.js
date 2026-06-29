@@ -1453,11 +1453,14 @@ router.post('/:id/confirm-deposit', authenticate, userLimiter, requireRole(['cus
   try {
     const { data: order, error: fetchErr } = await supabase
       .from('orders')
-      .select('id, order_display_id, escrow_booking_id, escrow_status')
+      .select('id, customer_id, order_display_id, escrow_booking_id, escrow_status')
       .eq('id', orderId)
       .maybeSingle();
 
     if (fetchErr || !order) return res.status(404).json({ error: 'Order not found' });
+    if (order.customer_id !== req.user.id) {
+      return res.status(403).json({ error: 'Access Denied: You do not own this order.' });
+    }
     if (order.escrow_status !== 'funding') {
       return res.status(400).json({ error: 'Order is not in funding state' });
     }
